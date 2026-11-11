@@ -4,13 +4,17 @@
   "description": "Task-difficulty model routing for Pi coding agents: one worker, dynamic model+effort per task, capped escalation cascade.",
   "type": "module",
   "license": "MIT",
-  "keywords": ["pi-package"],
+  "keywords": [
+    "pi-package"
+  ],
   "pi": {
-    "extensions": ["src/index.ts"]
+    "extensions": [
+      "src/index.ts"
+    ]
   },
   "scripts": {
     "test": "vitest run",
-    "smoke": "node --run smoke.bin.js"
+    "smoke": "CASCABEL_SMOKE=1 vitest run smoke"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",

@@ -16,12 +16,12 @@ reusing the user's existing worker agent instructions. No new agent definitions.
 
 ## Tasks
 
-- T1 (S1,S2,S6) Scaffold the package: `package.json` as `pi-package` with `pi.extensions`, vitest dev setup, .gitignore, README skeleton. Commit: `chore: scaffold cascabel package`.
-- T2 (S5,S6) Routing core: load/validate `routings.json` (fail-closed), tier resolution from difficulty+risk, capped escalation policy. Unit-tested. Commit: `feat: tier resolution and capped escalation policy`.
-- T3 (S2) RPC child runner: spawn `pi --mode rpc` with documented flags, LF JSONL framing, `get_state` → `prompt` → `agent_settled` → `get_last_assistant_text` → `get_session_stats`, timeout + kill. Unit-tested framing; spawn covered by smoke. Commit: `feat: rpc child runner`.
-- T4 (S1) Worker identity: read `~/.pi/agent/agents/gentle-ai-worker.md` live per spawn, strip frontmatter, pass via `--append-system-prompt`; missing file is a hard, clear error. Commit: `feat: worker prompt loading`.
-- T5 (S4,S6) `route_run` tool registration (task, difficulty, risk, workspace_root, label, timeout) running the capped cascade and returning the final outcome. Commit: `feat: route_run tool`.
-- T6 (S6,S7) Receipt + miss log: JSONL append under `~/.pi/cascabel/logs/` (env-overridable), per-attempt entries plus attempt summary in the returned text. Commit: `feat: receipts and miss log`.
+- T1 (S1,S2,S6) Scaffold the package: `package.json` as `pi-package` with `pi.extensions`, vitest dev setup, .gitignore, README skeleton. Commit: `6b05294 chore: scaffold cascabel package`.
+- T2 (S5,S6) Routing core: load/validate `routings.json` (fail-closed), tier resolution from difficulty+risk, capped escalation policy. Unit-tested. Commit: `6b05294 chore: scaffold cascabel package`.
+- T3 (S2) RPC child runner: spawn `pi --mode rpc` with documented flags, LF JSONL framing, `get_state` → `prompt` → `agent_settled` → `get_last_assistant_text` → `get_session_stats`, timeout + kill. Unit-tested framing; spawn covered by smoke. Commit: `8d05048 feat: rpc child runner and live-worker identity`.
+- T4 (S1) Worker identity: read `~/.pi/agent/agents/gentle-ai-worker.md` live per spawn, strip frontmatter, pass via `--append-system-prompt`; missing file is a hard, clear error. Commit: `8d05048 feat: rpc child runner and live-worker identity`.
+- T5 (S4,S6) `route_run` tool registration (task, difficulty, risk, workspace_root, label, timeout) running the capped cascade and returning the final outcome. Commit: `6c64dbf feat: route_run tool, capped cascade and receipts`.
+- T6 (S6,S7) Receipt + miss log: JSONL append under `~/.pi/cascabel/logs/` (env-overridable), per-attempt entries plus attempt summary in the returned text. Commit: `6c64dbf feat: route_run tool, capped cascade and receipts`.
 - T7 (S6) Verification: vitest suite green; linked install `pi install /home/reaan/Dev/cascabel` in global settings; one real smoke `route_run` against the child runtime if the environment permits. Commit: `test: suite and smoke`.
 - T8 (S6) README full (usage from ODD: explorer reports difficulty → route_run), memory mirror sync, close.
 
@@ -30,3 +30,4 @@ reusing the user's existing worker agent instructions. No new agent definitions.
 - L1 User: "que opinas de desarrollar la herramienta de ruteo desde cero y convertirlo en una extension de gentle-shell?"
 - L2 User: "si pero debe ser como lo propisimos y esos riesgos parchealos no quiero agentes subalternos quiero que mi worker tenga un routing de modelo en base a la tarea inicia crea la carpeta en Dev y llamalo como quieras un nombre creativo cualquier pregunta de arquitectura o de producto me la haces"
 - L3 Product questions answered: decisor = "el explorer lo propone cuando explora la tarea"; escalation = "Cascada automática con cap"; tiers = "3 tiers con la alineación actual"; scope = "v0 completo (con logging)". S3–S6 derive from these answers; cascade (S4) folds into v0 per the escalation answer.
+- L4 T7 evidence: vitest 63 passing unit tests; linked install `pi install /home/reaan/Dev/cascabel` recorded in ~/.pi/agent/settings.json; "--tools cascabel_route_run" allowlist probe clean (tool registered); real end-to-end smoke (CASCABEL_SMOKE=1) PASSED in 6.4s through quick tier with verdict parsed and one receipt recorded.
