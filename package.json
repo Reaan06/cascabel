@@ -1,0 +1,23 @@
+{
+  "name": "cascabel",
+  "version": "0.1.0",
+  "description": "Task-difficulty model routing for Pi coding agents: one worker, dynamic model+effort per task, capped escalation cascade.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": ["pi-package"],
+  "pi": {
+    "extensions": ["src/index.ts"]
+  },
+  "scripts": {
+    "test": "vitest run",
+    "smoke": "node --run smoke.bin.js"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "vitest": "^3.0.0"
+  }
+}
