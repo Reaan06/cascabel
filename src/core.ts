@@ -15,8 +15,9 @@ export interface TierSpec {
     | "high"
     | "xhigh"
     | "max";
-  /** Tool approval mode for the child session. */
-  approval?: "auto" | "reject" | "ask";
+  /** Tool approval for the headless child session: default `auto` (RPC children
+   * cannot answer prompts); `reject` pins a read-only probe. */
+  approval?: "auto" | "reject";
   /** Description surfaced in the receipt. */
   description?: string;
 }

@@ -94,8 +94,14 @@ function validateTierSpec(
     model: s.model,
     effort: s.effort as Effort,
   };
-  if (s.approval === "auto" || s.approval === "reject" || s.approval === "ask") {
-    out.approval = s.approval;
+  if (s.approval !== undefined) {
+    if (s.approval === "auto" || s.approval === "reject") {
+      out.approval = s.approval;
+    } else {
+      throw new RoutingError(
+        `${file}: ${where}.approval must be "auto" or "reject" (headless children cannot answer prompts)`,
+      );
+    }
   }
   if (typeof s.description === "string") out.description = s.description;
   return out;
