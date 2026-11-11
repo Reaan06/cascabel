@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { childArguments, ChildRunOptions, ChildRunError } from "../src/child.js";
-import { defaultRoutings, type TierSpec } from "../src/core.js";
+import { childArguments, ChildRunOptions, ChildRunError } from "../src/child";
+import { defaultRoutings, type TierSpec } from "../src/core";
 
 const base: ChildRunOptions = {
   tierSpec: defaultRoutings().tiers.quick,

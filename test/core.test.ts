@@ -5,7 +5,7 @@ import {
   resolveTier,
   RoutingError,
   type RoutingsFile,
-} from "../src/core.js";
+} from "../src/core";
 
 describe("resolveTier", () => {
   it("routes each difficulty to its own tier", () => {

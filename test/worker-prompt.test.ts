@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { loadWorkerPrompt, stripFrontmatter, WorkerPromptError } from "../src/worker-prompt.js";
+import { loadWorkerPrompt, stripFrontmatter, WorkerPromptError } from "../src/worker-prompt";
 
 const dir = mkdtempSync(join(tmpdir(), "cascabel-worker-"));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));

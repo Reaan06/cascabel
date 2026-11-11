@@ -28,6 +28,9 @@ export interface RoutingsFile {
   escalation: Difficulty[];
   /** Hard ceiling per run: tiers this task may ever try. */
   plan?: Difficulty[];
+  /** Check-failed retries allowed within one tier before stepping up (S4).
+   * The approved cap was "one retry per tier"; keep 0 for strict cascades. */
+  retriesPerTier?: number;
 }
 
 export function defaultRoutings(): RoutingsFile {

@@ -2,9 +2,9 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { loadRoutings, routingsPath } from "../src/config.js";
-import { RoutingError } from "../src/core.js";
-import { defaultRoutings } from "../src/core.js";
+import { loadRoutings, routingsPath } from "../src/config";
+import { RoutingError } from "../src/core";
+import { defaultRoutings } from "../src/core";
 
 const sandbox = mkdtempSync(join(tmpdir(), "cascabel-test-"));
 const sandboxPath = join(sandbox, "routings.json");

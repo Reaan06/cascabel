@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { encodeFrame, decodeFrames } from "../src/jsonl.js";
+import { encodeFrame, decodeFrames } from "../src/jsonl";
 
 describe("JSONL framing (LF only)", () => {
   it("encodes with a trailing \\n", () => {

@@ -4,8 +4,8 @@
 // No agent flags exist, so worker identity arrives as --append-system-prompt.
 import { spawn, type ChildProcess } from "node:child_process";
 import { once } from "node:events";
-import type { TierSpec } from "./core.js";
-import { decodeFrames, encodeFrame } from "./jsonl.js";
+import type { TierSpec } from "./core";
+import { decodeFrames, encodeFrame } from "./jsonl";
 
 export interface ChildRunOptions {
   /** Tier/model/thinking for this spawn (validated upstream). */

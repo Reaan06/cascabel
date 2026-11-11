@@ -1,8 +1,8 @@
 // Loads and validates routings.json. Fail-closed (S6): any missing or invalid
 // entry is a hard error — Cascabel never guesses a model.
 import { readFileSync } from "node:fs";
-import type { Difficulty, RoutingsFile } from "./core.js";
-import { defaultRoutings, DIFFICULTIES, RoutingError } from "./core.js";
+import type { Difficulty, RoutingsFile } from "./core";
+import { defaultRoutings, DIFFICULTIES, RoutingError } from "./core";
 
 export const EFFORTS = [
   "off",
@@ -58,6 +58,15 @@ function validateAgainstDefaults(raw: unknown, file: string): RoutingsFile {
   if (input.plan !== undefined) {
     validateStringArray(input.plan, file, "plan");
     out.plan = input.plan as Difficulty[];
+  }
+  if (input.retriesPerTier !== undefined) {
+    const n = input.retriesPerTier;
+    if (typeof n !== "number" || !Number.isInteger(n) || n < 0 || n > 3) {
+      throw new RoutingError(
+        `${file}: retriesPerTier must be an integer between 0 and 3`,
+      );
+    }
+    out.retriesPerTier = n;
   }
   // Fail-closed pass: every tier must resolve after merge.
   for (const tier of DIFFICULTIES) {
