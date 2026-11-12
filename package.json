@@ -1,6 +1,6 @@
 {
   "name": "cascabel",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Task-difficulty model routing for Pi coding agents: one worker, dynamic model+effort per task, capped escalation cascade.",
   "type": "module",
   "license": "MIT",
@@ -23,5 +23,19 @@
   "devDependencies": {
     "@types/node": "^22",
     "vitest": "^3.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Reaan06/cascabel.git"
+  },
+  "homepage": "https://github.com/Reaan06/cascabel#readme",
+  "bugs": {
+    "url": "https://github.com/Reaan06/cascabel/issues"
+  },
+  "author": {
+    "name": "Reaan06"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
