@@ -185,6 +185,50 @@ describe("runChild exit handling", () => {
     }
   }, 30_000);
 
+  it("lets a healthy child that settles after the old 10s close race succeed", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "cascabel-child-healthy-"));
+    process.env.CASCABEL_SESSION_DIR = join(dir, "sessions");
+    // A child that answers the RPC handshake, works for over 10 seconds (the
+    // former EXIT_RACE_MS window), settles, and exits cleanly. Before the fix
+    // the close race declared this child failed at 10s with exit code null.
+    const slowWorker: SpawnLike = (_command, _args, options) =>
+      spawn(
+        process.execPath,
+        [
+          "-e",
+          [
+            "const rl=require('node:readline').createInterface({input:process.stdin})",
+            "const send=o=>process.stdout.write(JSON.stringify(o)+'\\n')",
+            "rl.on('line',l=>{",
+            "  let f; try{f=JSON.parse(l)}catch{ return }",
+            "  if(!f.id) return",
+            // echo answers cover get_state / prompt; stats are best-effort
+            "  if(f.type==='get_last_assistant_text'){ send({id:f.id,text:'done'}) ; return }",
+            "  send({id:f.id,data:{}})",
+            "  if(f.type==='prompt'){ setTimeout(()=>{ send({type:'agent_settled'}); },11000) }",
+            "})",
+          ].join(";"),
+        ],
+        options,
+      );
+    try {
+      const result = await runChild(
+        {
+          tierSpec: base.tierSpec,
+          cwd: dir,
+          task: "slow but healthy work",
+          timeoutMs: 60_000,
+          piCommand: process.execPath,
+        },
+        slowWorker,
+      );
+      expect(result.text).toBe("done");
+      expect(result.timedOut).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 40_000);
+
   it("does not hang past the close race when a grandchild holds stdio", async () => {
     const dir = mkdtempSync(join(tmpdir(), "cascabel-child-grandchild-"));
     process.env.CASCABEL_SESSION_DIR = join(dir, "sessions");

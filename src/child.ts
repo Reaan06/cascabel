@@ -285,13 +285,12 @@ export async function runChild(
     .then(([code]) => ({ code: code ?? null }))
     .catch(() => ({ code: null }));
   // `close` waits for all stdio streams; a straggler grandchild can hold them
-  // open long after every child process died. Race a hard bound so the run
-  // can never hang past the kill window.
-  const EXIT_RACE_MS = 10_000;
-  const exitRace = new Promise<{ code: number | null }>((resolve) => {
-    const timer = setTimeout(() => resolve({ code: null }), EXIT_RACE_MS);
-    timer.unref?.();
-  });
+  // open long after every child process died. That case is covered elsewhere:
+  // the exit handler below surfaces an early death immediately, the budget
+  // timer kills a silent child, and wrapup kills the whole process group on
+  // settle so `close` always fires in healthy runs. There is deliberately NO
+  // fixed close race here: one would kill healthy children that legitimately
+  // need more than its window to settle.
 
   // A child that dies before settling (unknown model, spawn failure) must
   // surface immediately: waiting for a request timer would burn the whole
@@ -353,7 +352,7 @@ export async function runChild(
     rejectAll(err as Error);
   }
 
-  const { code } = await Promise.race([exitPromise, exitRace]);
+  const { code } = await exitPromise;
   clearTimeout(budget);
   killChild(child);
   if (!settled || firstError) {
