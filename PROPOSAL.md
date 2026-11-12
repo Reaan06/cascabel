@@ -61,7 +61,7 @@ Design rules that make it trustworthy rather than clever:
 
 | Check | Result |
 | --- | --- |
-| Unit suite (tier resolution, capped cascade, config fail-closed, RPC framing, receipts) | **69 passing** |
+| Unit suite (tier resolution, capped cascade, config fail-closed, RPC framing, receipts, cost telemetry, `/cascabel:tiers`) | **101 passing** |
 | Real end-to-end smoke (headless child spawn, RCP handshake, verdict parse) | **PASS in ~9–12 s** |
 | Live loop with a real bug proposal, fresh session, no hand-holding | **1 m 07 s total**: session classified the bug, routed, child fixed the repo, `npm test` green, verdict pass |
 | Receipt recorded for that run | `{tier: quick, model: gemini-3.8-flash-high, ok: true, 19.5 s}` |
@@ -89,11 +89,14 @@ file is authoritative and merged over defaults, invalid entries fail closed).
 
 ## Roadmap
 
-- **v0.2 (this proposal):** package polish, CI, docs, public release.
-- **v0.3:** escalation telemetry in the tool result tokens/cost fields;
-  routing suggestions generated from the receipts log.
-- **v0.4:** optional classifier lane for unattended batch routing (opt-in,
-  measured against a baseline before it earns trust).
+- **v0.2:** package polish, CI, docs, public release. *(delivered)*
+- **v0.3:** per-attempt cost telemetry in receipts, result details and
+  summaries; `/cascabel:tiers` ladder + receipt-statistics manager with
+  fail-closed editing; documented compatibility for plain `pi` and
+  gentle-shell / gentle-ai. *(delivered)*
+- **v0.4:** receipts-driven routing suggestions (turn measured misses into
+  proposed ladder changes) and an optional classifier lane for unattended
+  batch routing (opt-in, measured against a baseline before it earns trust).
 
 ## Risks and mitigations
 

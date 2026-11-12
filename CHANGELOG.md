@@ -3,6 +3,29 @@
 All notable changes to Cascabel are documented here (Keep a Changelog 1.1,
 SemVer 2.0.0).
 
+## [0.3.0] - 2026-11-12
+
+### Added
+- **Cost telemetry (S8).** Every attempt receipt carries optional
+  `tokens` (`input`, `output`, `cacheRead`, `cacheWrite`, `total`) and `cost`
+  (`total`, `currency`) extracted defensively from the child session's
+  `get_session_stats`. Fields are best-effort: missing or garbage values stay
+  absent, never zero-filled. Attempt headers, FAIL summaries and the tool
+  result `details` (`tokensTotal`, `costTotal`) surface the same numbers, and a
+  `Total:` line is added when any attempt reported cost.
+- **`/cascabel:tiers` command (S9).** Shows the ladder, the `routings.json` path
+  in effect, and per-tier receipt statistics (attempts, pass rate, average cost,
+  escalation count). `set <tier> <provider/model> <effort>` rewrites the file and
+  re-validates fail-closed, restoring the previous bytes on error. Interactive
+  TUI mode edits through the same validated path; headless hosts fall back to
+  the args-mode help. Both modes print the three routing rules.
+- README sections for cost telemetry, `/cascabel:tiers`, and compatibility with
+  plain `pi` and gentle-shell / gentle-ai (install from the GitHub hub; the
+  gentle-pi `/gentle:profiles` panel is upstream-owned and session-frozen).
+
+### Changed
+- `npm test` suite grows to 102 tests (101 passing + 1 gated smoke).
+
 ## [0.2.0] - 2026-11-12
 
 ### Added

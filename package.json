@@ -1,6 +1,6 @@
 {
   "name": "cascabel",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Task-difficulty model routing for Pi coding agents: one worker, dynamic model+effort per task, capped escalation cascade.",
   "type": "module",
   "license": "MIT",
