@@ -23,6 +23,8 @@ export interface ChildRunOptions {
   timeoutMs?: number;
   /** pi executable; overridable for tests and multi-version setups. */
   piCommand?: string;
+  /** Parent abort signal; aborting kills the child and fails the run. */
+  signal?: AbortSignal;
 }
 
 export interface ChildRunResult {
@@ -38,7 +40,12 @@ export interface SpawnLike {
   (
     command: string,
     args: string[],
-    options: { cwd: string; stdio: ["pipe", "pipe", "pipe"]; env: NodeJS.ProcessEnv },
+    options: {
+      cwd: string;
+      stdio: ["pipe", "pipe", "pipe"];
+      env: NodeJS.ProcessEnv;
+      detached?: boolean;
+    },
   ): ChildProcess;
 }
 
@@ -145,6 +152,9 @@ export async function runChild(
     cwd: opts.cwd,
     stdio: ["pipe", "pipe", "pipe"],
     env: childEnv(),
+    // Own process group: killChild can then reap grandchildren that inherit
+    // the stdio pipes and would otherwise keep `close` from ever firing.
+    detached: true,
   });
 
   const stderrChunks: string[] = [];
@@ -274,6 +284,14 @@ export async function runChild(
   const exitPromise: Promise<{ code: number | null }> = once(child, "close")
     .then(([code]) => ({ code: code ?? null }))
     .catch(() => ({ code: null }));
+  // `close` waits for all stdio streams; a straggler grandchild can hold them
+  // open long after every child process died. Race a hard bound so the run
+  // can never hang past the kill window.
+  const EXIT_RACE_MS = 10_000;
+  const exitRace = new Promise<{ code: number | null }>((resolve) => {
+    const timer = setTimeout(() => resolve({ code: null }), EXIT_RACE_MS);
+    timer.unref?.();
+  });
 
   // A child that dies before settling (unknown model, spawn failure) must
   // surface immediately: waiting for a request timer would burn the whole
@@ -293,6 +311,21 @@ export async function runChild(
       new ChildRunError(`cascabel child failed to start: ${err.message}`),
     );
   });
+
+  // User aborts must surface immediately, not after the per-attempt budget.
+  if (opts.signal) {
+    if (opts.signal.aborted) {
+      rejectAll(new ChildRunError("cascabel run aborted by user"));
+    } else {
+      opts.signal.addEventListener(
+        "abort",
+        () => {
+          rejectAll(new ChildRunError("cascabel run aborted by user"));
+        },
+        { once: true },
+      );
+    }
+  }
 
   const budgetMs = opts.timeoutMs ?? 1_800_000;
   const budget = setTimeout(() => {
@@ -320,8 +353,9 @@ export async function runChild(
     rejectAll(err as Error);
   }
 
-  const { code } = await exitPromise;
+  const { code } = await Promise.race([exitPromise, exitRace]);
   clearTimeout(budget);
+  killChild(child);
   if (!settled || firstError) {
     if (timedOut) {
       throw new ChildRunError(
@@ -356,10 +390,34 @@ function childEnv(): NodeJS.ProcessEnv {
   return env;
 }
 
+/** Kill the child and its whole process group. */
 function killChild(child: ChildProcess): void {
   if (child.exitCode !== null || child.signalCode) return;
-  child.kill();
+  // The child runs detached (own process group) so grandchildren that inherit
+  // its stdio pipes die too; otherwise `close` never fires and the run hangs.
+  if (child.pid !== undefined) {
+    try {
+      process.kill(-child.pid, "SIGTERM");
+    } catch {
+      try {
+        child.kill("SIGTERM");
+      } catch {
+        /* already gone */
+      }
+    }
+  } else {
+    try {
+      child.kill("SIGTERM");
+    } catch {
+      /* already gone */
+    }
+  }
   const enforce = setTimeout(() => {
+    try {
+      if (child.pid !== undefined) process.kill(-child.pid, "SIGKILL");
+    } catch {
+      /* already gone */
+    }
     try {
       child.kill("SIGKILL");
     } catch {

@@ -227,6 +227,6 @@ npm run smoke         # real end-to-end child run (cheapest tier, ~6s)
 Source layout: `src/core.ts` (pure routing policy), `src/config.ts` (fail-closed loader),
 `src/child.ts` (RPC runner), `src/worker-prompt.ts` (live identity), `src/cascade.ts`
 (cap policy + verdicts + telemetry), `src/log.ts` (receipts + usage extraction),
-`src/tiers-command.ts` (`/cascabel:tiers`), `src/index.ts` (tool + command registration).
+`src/tiers-command.ts` (`/cascabel:tiers`), root `index.ts` (tool + command registration).
 
 Design constraints and specs with user quotes: `odd/tasks/cascabel.md`.

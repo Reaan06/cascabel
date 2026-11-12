@@ -125,7 +125,107 @@ describe("runChild exit handling", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   }, 30_000);
-});
+
+  it("spawns the child detached so the process group is killable", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "cascabel-child-detached-"));
+    process.env.CASCABEL_SESSION_DIR = join(dir, "sessions");
+    let seenOptions: { detached?: boolean } | undefined;
+    const recorder: SpawnLike = (command, args, options) => {
+      seenOptions = options;
+      return spawn(command, args, options);
+    };
+    try {
+      await expect(
+        runChild(
+          {
+            tierSpec: base.tierSpec,
+            cwd: dir,
+            task: "never runs",
+            timeoutMs: 60_000,
+            piCommand: process.execPath,
+          },
+          recorder,
+        ),
+      ).rejects.toThrow();
+      expect(seenOptions?.detached).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("aborts promptly when the parent abort signal fires mid-run", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "cascabel-child-abort-"));
+    process.env.CASCABEL_SESSION_DIR = join(dir, "sessions");
+    // A child that never answers RPC and never exits on its own.
+    const silent: SpawnLike = (_command, _args, options) =>
+      spawn(
+        process.execPath,
+        ["-e", "process.stdin.resume()"],
+        options,
+      );
+    const ac = new AbortController();
+    const startedAt = Date.now();
+    try {
+      const pending = runChild(
+        {
+          tierSpec: base.tierSpec,
+          cwd: dir,
+          task: "hangs forever without the abort",
+          timeoutMs: 600_000,
+          piCommand: process.execPath,
+          signal: ac.signal,
+        },
+        silent,
+      );
+      setTimeout(() => ac.abort(), 200);
+      await expect(pending).rejects.toThrow(/aborted by user/);
+      expect(Date.now() - startedAt).toBeLessThan(10_000);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("does not hang past the close race when a grandchild holds stdio", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "cascabel-child-grandchild-"));
+    process.env.CASCABEL_SESSION_DIR = join(dir, "sessions");
+    // The child exits immediately but leaves a grandchild holding the pipes,
+    // which previously kept `close` (and therefore runChild) from resolving.
+    const leaky: SpawnLike = (_command, _args, options) =>
+      spawn(
+        process.execPath,
+        [
+          "-e",
+          [
+            "const cp=require('node:child_process')",
+            "cp.spawn(process.execPath,['-e','process.stdin.resume()'],{stdio:['inherit','inherit','inherit'],detached:true})",
+            "process.exit(3)",
+          ].join(";"),
+        ],
+        options,
+      );
+    const startedAt = Date.now();
+    try {
+      await expect(
+        runChild(
+          {
+            tierSpec: base.tierSpec,
+            cwd: dir,
+            task: "never runs",
+            timeoutMs: 60_000,
+            piCommand: process.execPath,
+          },
+          leaky,
+        ),
+      ).rejects.toThrow(/exited before settling/);
+      // The close race (10s) bounds the run; it must not hit the 60s budget.
+      expect(Date.now() - startedAt).toBeLessThan(25_000);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+      // The group kill should have reaped the grandchild; nothing to assert
+      // beyond the test process staying alive and responsive.
+    }
+  }, 40_000);
+}, 60_000);
 
 const tmpFiles: string[] = [];
 afterAll(() => {

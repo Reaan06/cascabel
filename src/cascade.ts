@@ -23,6 +23,8 @@ export interface RouteInput {
   cwd: string;
   /** Per-attempt budget; defaults to 30 minutes. */
   timeoutMs?: number;
+  /** Parent abort signal; aborting fails the whole route immediately. */
+  signal?: AbortSignal;
 }
 
 export interface AttemptRecord {
@@ -55,7 +57,15 @@ export interface RouteDeps {
     task: string;
     systemPrompt?: string;
     timeoutMs?: number;
+    signal?: AbortSignal;
   }) => Promise<ChildRunResult>;
+  /** Invoked when each attempt starts, for parent progress feedback. */
+  onAttempt?: (info: {
+    attempt: number;
+    tier: Difficulty;
+    model: string;
+    effort: string;
+  }) => void;
 }
 
 export const VERDICT_PREFIX = "cascabel_verdict:";
@@ -92,9 +102,18 @@ export async function runRoute(
 
   while (currentTier) {
     const tier: Difficulty = currentTier;
+    if (input.signal?.aborted) {
+      return { ok: false, text: "Cascabel: aborted by user.", attempts };
+    }
     const spec = deps.routings.tiers[tier];
     // Retry budget for this tier: 1 initial attempt + retries.
     for (let attemptNo = 1; attemptNo <= 1 + retries; attemptNo++) {
+      deps.onAttempt?.({
+        attempt: attemptNo,
+        tier,
+        model: spec.model,
+        effort: spec.effort,
+      });
       const startedAt = Date.now();
       let result: ChildRunResult | undefined;
       let runError: unknown;
@@ -105,6 +124,7 @@ export async function runRoute(
           task: enhancedTask(input.task),
           systemPrompt: deps.workerPrompt,
           timeoutMs: input.timeoutMs,
+          signal: input.signal,
         });
       } catch (err) {
         runError = err;

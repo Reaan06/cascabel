@@ -244,6 +244,71 @@ describe("vi mocking sanity", () => {
   });
 });
 
+describe("abort and progress plumbing", () => {
+  function makeOutputDeps(
+    outputs: Array<ChildRunResult | Error>,
+    onAttempt: NonNullable<RouteDeps["onAttempt"]>,
+    signal?: AbortSignal,
+  ): RouteDeps {
+    let i = 0;
+    return {
+      routings: defaultRoutings(),
+      workerPrompt: "# worker contract",
+      logger: nullLogger,
+      onAttempt,
+      runChild: async (opts) => {
+        expect(opts.signal).toBe(signal);
+        const next = outputs[i++];
+        if (next instanceof Error) throw next;
+        if (next === undefined) throw new Error("test exhausted scripted outputs");
+        return next;
+      },
+    };
+  }
+
+  it("fires onAttempt at each attempt start with tier and model", async () => {
+    const events: Array<{ attempt: number; tier: string; model: string; effort: string }> = [];
+    const deps = makeOutputDeps(
+      [childResult(childText("pass"))],
+      (info) => events.push({ ...info }),
+    );
+    const result = await runRoute({ ...input }, deps);
+    expect(result.ok).toBe(true);
+    expect(events).toEqual([
+      { attempt: 1, tier: "quick", model: expect.any(String), effort: expect.any(String) },
+    ]);
+  });
+
+  it("threads the abort signal to every child run and stops the cascade", async () => {
+    const ac = new AbortController();
+    const events: Array<{ attempt: number; tier: string }> = [];
+    const deps = makeOutputDeps(
+      [new Error("child crashed"), new Error("child crashed again")],
+      (info) => events.push({ attempt: info.attempt, tier: info.tier }),
+      ac.signal,
+    );
+    deps.routings = { ...deps.routings, retriesPerTier: 0 };
+    // Abort after the first attempt fails: the build-tier attempt must never start.
+    const pending = runRoute({ ...input, signal: ac.signal }, deps);
+    ac.abort();
+    const result = await pending;
+    expect(result.ok).toBe(false);
+    expect(result.text).toMatch(/aborted by user/);
+    // Only the quick-tier attempt ran; no build-tier attempt was started.
+    expect(events).toHaveLength(1);
+    expect(events[0].tier).toBe("quick");
+  });
+
+  it("returns the aborted route result when the signal was already aborted", async () => {
+    const ac = new AbortController();
+    ac.abort();
+    const deps = makeOutputDeps([], () => {}, ac.signal);
+    const result = await runRoute({ ...input, signal: ac.signal }, deps);
+    expect(result.ok).toBe(false);
+    expect(result.text).toMatch(/aborted by user/);
+  });
+});
+
 const usageStats = {
   tokens: { input: 200, output: 800, cacheRead: 40, total: 1000 },
   cost: { total: 0.0042, currency: "USD" },
