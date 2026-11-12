@@ -117,7 +117,17 @@ export default function register(pi: {
         ),
       ].join("\n");
 
-      return `${header}\n\n${result.text}`;
+      const text = `${header}\n\n${result.text}`;
+      // Pi's ToolDefinition requires the AgentToolResult shape — a bare
+      // string reaches the parent model as "(no tool output)".
+      return {
+        content: [{ type: "text", text }],
+        details: {
+          ok: result.ok,
+          attempts: result.attempts.length,
+          tiers: result.attempts.map((a) => a.tier),
+        },
+      };
     },
   });
 }

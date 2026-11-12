@@ -43,7 +43,7 @@ describe("loadRoutings — fail-closed config (S6)", () => {
     );
     expect(loaded.tiers.quick.model).toBe("custom/cheap");
     // untouched tiers keep defaults
-    expect(loaded.tiers.build.model).toBe("nan/deepseek-v4-flash");
+    expect(loaded.tiers.build.model).toBe("cli-proxy-api/gemini-3.8-flash-high");
     expect(loaded.tiers.deep.effort).toBe("high");
   });
 
@@ -126,8 +126,8 @@ describe("shipped defaults (S5)", () => {
       effort: "medium",
     });
     expect(d.tiers.build).toMatchObject({
-      model: "nan/deepseek-v4-flash",
-      effort: "max",
+      model: "cli-proxy-api/gemini-3.8-flash-high",
+      effort: "high",
     });
     expect(d.tiers.deep).toMatchObject({
       model: "cli-proxy-api/gpt-5.6-sol",

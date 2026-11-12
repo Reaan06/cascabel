@@ -79,7 +79,7 @@ describe("runRoute — capped cascade (S4, S5, S6)", () => {
     expect(result.ok).toBe(true);
     expect(calls.map((c) => c.model)).toEqual([
       "cli-proxy-api/gemini-3.8-flash-high",
-      "nan/deepseek-v4-flash",
+      "cli-proxy-api/gemini-3.8-flash-high",
     ]);
   });
 
@@ -112,7 +112,7 @@ describe("runRoute — capped cascade (S4, S5, S6)", () => {
     expect(calls.map((c) => c.model)).toEqual([
       "cli-proxy-api/gemini-3.8-flash-high",
       "cli-proxy-api/gemini-3.8-flash-high",
-      "nan/deepseek-v4-flash",
+      "cli-proxy-api/gemini-3.8-flash-high",
     ]);
     const attempts = result.attempts;
     expect(attempts.map((a) => `${a.tier}#${a.attemptNo}`)).toEqual([
@@ -132,7 +132,7 @@ describe("runRoute — capped cascade (S4, S5, S6)", () => {
     expect(result.ok).toBe(true);
     expect(calls.map((c) => c.model)).toEqual([
       "cli-proxy-api/gemini-3.8-flash-high",
-      "nan/deepseek-v4-flash",
+      "cli-proxy-api/gemini-3.8-flash-high",
     ]);
   });
 
@@ -214,7 +214,7 @@ describe("risk widening (S3)", () => {
     const { deps, calls } = makeDeps([childResult(childText("pass"))]);
     const result = await runRoute({ ...input, risk: "auth" }, deps);
     expect(result.ok).toBe(true);
-    expect(calls[0].model).toBe("nan/deepseek-v4-flash");
+    expect(calls[0].model).toBe("cli-proxy-api/gemini-3.8-flash-high");
   });
 });
 

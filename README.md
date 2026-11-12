@@ -20,7 +20,7 @@ explorer reports difficulty ──►  route_run(task, difficulty, risk?)
             ┌────────────────────────┴───────────────┐
             ▼                                        │
    quick  gemini-3.8-flash-high @ medium             │ FAIL: 1 retry in tier,
-   build  deepseek-v4-flash     @ max                │ then one step up
+   build  gemini-3.8-flash-high @ high                │ then one step up
    deep   gpt-5.6-sol           @ high               │
             └────────────────────────────────────────┘
                                      │  cap reached
@@ -56,7 +56,7 @@ over defaults. To override, create the file:
 {
   "tiers": {
     "quick": { "model": "cli-proxy-api/gemini-3.8-flash-high", "effort": "medium" },
-    "build": { "model": "nan/deepseek-v4-flash", "effort": "max" },
+    "build": { "model": "cli-proxy-api/gemini-3.8-flash-high", "effort": "high" },
     "deep":  { "model": "cli-proxy-api/gpt-5.6-sol", "effort": "high" }
   },
   "escalation": ["quick", "build", "deep"],
@@ -91,7 +91,7 @@ Per attempt, one JSON line is appended to `~/.pi/cascabel/logs/attempts.jsonl`:
 
 ```json
 {"timestamp":"...","label":"map footer","difficulty":"quick","risk":null,"tier":"quick",
- "attempt":1,"model":"nan/deepseek-v4-flash","effort":"max","ok":false,
+ "attempt":1,"model":"cli-proxy-api/gemini-3.8-flash-high","effort":"medium","ok":false,
  "reason":"tests red: expect(foo).toBe(bar)","durationMs":51234,"sessionId":"...","cwd":"..."}
 ```
 

@@ -42,8 +42,13 @@ export function defaultRoutings(): RoutingsFile {
         description: "Docs, small edits, renames, low-risk writes",
       },
       build: {
-        model: "nan/deepseek-v4-flash",
-        effort: "max",
+        // Effort-first escalation (playbook rule 1): same proven model, higher
+        // thinking, before a model switch. The previous nan/deepseek-v4-flash
+        // tier does not resolve in headless children (nan provider comes from
+        // a TUI-side bridge extension); restore it only when its catalog
+        // resolves via get_available_models in `pi --mode rpc`.
+        model: "cli-proxy-api/gemini-3.8-flash-high",
+        effort: "high",
         description: "Default behavior work with tests",
       },
       deep: {

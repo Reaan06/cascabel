@@ -4,6 +4,9 @@
 // No agent flags exist, so worker identity arrives as --append-system-prompt.
 import { spawn, type ChildProcess } from "node:child_process";
 import { once } from "node:events";
+import { mkdirSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import type { TierSpec } from "./core";
 import { decodeFrames, encodeFrame } from "./jsonl";
 
@@ -49,13 +52,26 @@ export class ChildRunError extends Error {
 }
 
 export function childArguments(opts: ChildRunOptions): string[] {
-  const args = ["--mode", "rpc", "--model", opts.tierSpec.model];
+  const args = ["--mode", "rpc", "--session-dir", cascabelSessionDir()];
+  args.push("--model", opts.tierSpec.model);
   args.push("--thinking", opts.tierSpec.effort);
   args.push(approvalFlag(opts.tierSpec.approval));
   if (opts.systemPrompt) {
     args.push("--append-system-prompt", opts.systemPrompt);
   }
   return args;
+}
+
+/**
+ * Session storage for cascabel children. Without this, headless children write
+ * into Pi's cwd-scoped user session store (`~/.pi/agent/sessions/<cwd>/`), the
+ * same place the user's own sessions live — so a later resume picks up a
+ * cascabel run. Children get their own directory, like gentle-pi's runner.
+ */
+export function cascabelSessionDir(): string {
+  const env = process.env.CASCABEL_SESSION_DIR;
+  if (env) return env;
+  return join(homedir(), ".pi", "cascabel", "sessions");
 }
 
 /**
@@ -79,6 +95,13 @@ export async function runChild(
   spawnFn: SpawnLike = spawn,
 ): Promise<ChildRunResult> {
   const command = opts.piCommand ?? process.env.CASCABEL_PI ?? "pi";
+  try {
+    mkdirSync(cascabelSessionDir(), { recursive: true });
+  } catch (err) {
+    throw new ChildRunError(
+      `cannot create cascabel session dir ${cascabelSessionDir()}: ${(err as Error).message}`,
+    );
+  }
   const child = spawnFn(command, childArguments(opts), {
     cwd: opts.cwd,
     stdio: ["pipe", "pipe", "pipe"],
@@ -213,6 +236,25 @@ export async function runChild(
     .then(([code]) => ({ code: code ?? null }))
     .catch(() => ({ code: null }));
 
+  // A child that dies before settling (unknown model, spawn failure) must
+  // surface immediately: waiting for a request timer would burn the whole
+  // budget and report a timeout instead of the real exit.
+  child.on("exit", (code, signal) => {
+    if (settled) return;
+    rejectAll(
+      new ChildRunError(
+        `cascabel child exited before settling (exit code ${code}${signal ? `, signal ${signal}` : ""})`,
+        { stderr: lastStderr(stderrChunks), exitCode: code },
+      ),
+    );
+  });
+  child.on("error", (err) => {
+    if (settled) return;
+    rejectAll(
+      new ChildRunError(`cascabel child failed to start: ${err.message}`),
+    );
+  });
+
   const budgetMs = opts.timeoutMs ?? 1_800_000;
   const budget = setTimeout(() => {
     timedOut = true;
@@ -222,7 +264,6 @@ export async function runChild(
       }),
     );
   }, budgetMs);
-  budget.unref?.();
 
   try {
     await request({ type: "get_state" }, 60_000);
