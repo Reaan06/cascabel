@@ -1,11 +1,29 @@
 import { describe, expect, it, vi } from "vitest";
 import { defaultRoutings, type RoutingsFile } from "../src/core";
-import { parseVerdict, runRoute, type RouteDeps, type RouteInput } from "../src/cascade";
+import {
+  attemptLine,
+  parseVerdict,
+  runRoute,
+  totalsLine,
+  type AttemptRecord,
+  type RouteDeps,
+  type RouteInput,
+} from "../src/cascade";
 import type { ChildRunResult } from "../src/child";
 import { nullLogger, type AttemptReceipt } from "../src/log";
 
-function childResult(text: string, sessionId = "child-sess"): ChildRunResult {
-  return { text, exitCode: 0, sessionId, timedOut: false };
+function childResult(
+  text: string,
+  sessionId = "child-sess",
+  stats?: Record<string, unknown>,
+): ChildRunResult {
+  return {
+    text,
+    exitCode: 0,
+    sessionId,
+    timedOut: false,
+    ...(stats ? { stats } : {}),
+  };
 }
 
 function childText(verdict: "pass" | "fail", extra = ""): string {
@@ -223,5 +241,74 @@ describe("risk widening (S3)", () => {
 describe("vi mocking sanity", () => {
   it("vi is available for future runChild integrations", () => {
     expect(typeof vi.fn()).toBe("function");
+  });
+});
+
+const usageStats = {
+  tokens: { input: 200, output: 800, cacheRead: 40, total: 1000 },
+  cost: { total: 0.0042, currency: "USD" },
+};
+
+describe("cost telemetry (S8)", () => {
+  it("threads child session stats into the attempt and the receipt", async () => {
+    const receipts: AttemptReceipt[] = [];
+    const { deps } = makeDeps([childResult(childText("pass"), "sess", usageStats)]);
+    deps.logger = { record: (r) => receipts.push(r) };
+    const result = await runRoute(input, deps);
+    expect(result.attempts[0].tokens).toEqual(usageStats.tokens);
+    expect(result.attempts[0].cost).toEqual(usageStats.cost);
+    expect(receipts[0].tokens).toEqual(usageStats.tokens);
+    expect(receipts[0].cost).toEqual(usageStats.cost);
+  });
+
+  it("renders tokens and cost in the attempt line and the totals line", async () => {
+    const { deps } = makeDeps([childResult(childText("pass"), "sess", usageStats)]);
+    const result = await runRoute(input, deps);
+    expect(attemptLine(result.attempts[0])).toMatch(
+      /→ pass \(\d+\.\ds, 1k tok, \$0\.0042\)/,
+    );
+    expect(totalsLine(result.attempts)).toBe(
+      "Total: 1 attempt(s), 1k tok, $0.0042",
+    );
+  });
+
+  it("keeps full per-attempt cost diagnostics in the FAIL summary", async () => {
+    const { deps } = makeDeps(
+      [
+        childResult(childText("fail"), "s1", usageStats),
+        childResult(childText("fail"), "s2"),
+        childResult(childText("fail"), "s3", { cost: { total: 0.25 } }),
+      ],
+      { retriesPerTier: 0 },
+    );
+    const result = await runRoute(input, deps);
+    expect(result.ok).toBe(false);
+    expect(result.text).toMatch(/\[quick #1\].*FAIL.*1k tok.*\$0\.0042/);
+    // the second attempt reported no stats: no zero-faked telemetry appears
+    expect(result.text).toMatch(/\[build #1\][^\n]*FAIL(?![^\n]*tok)/);
+    expect(result.text).toMatch(/\[deep #1\][^\n]*FAIL.*\$0\.25/);
+  });
+
+  it("leaves telemetry absent when the child reports no stats", async () => {
+    const { deps } = makeDeps([childResult(childText("pass"))]);
+    const result = await runRoute(input, deps);
+    expect(result.attempts[0]).not.toHaveProperty("tokens");
+    expect(result.attempts[0]).not.toHaveProperty("cost");
+    expect(totalsLine(result.attempts)).toBeUndefined();
+  });
+
+  it("never emits a TOTAL line from token data alone", () => {
+    const records: AttemptRecord[] = [
+      {
+        tier: "quick",
+        attemptNo: 1,
+        model: "m",
+        effort: "medium",
+        ok: true,
+        durationMs: 10,
+        tokens: { total: 500 },
+      },
+    ];
+    expect(totalsLine(records)).toBeUndefined();
   });
 });

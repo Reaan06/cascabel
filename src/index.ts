@@ -1,5 +1,6 @@
-// Cascabel — the Pi extension entrypoint. Registers exactly one tool:
-// route_run. Everything else in src/ is plain, independently testable code.
+// Cascabel — the Pi extension entrypoint. Registers exactly one tool
+// (cascabel_route_run) and one command (/cascabel:tiers). Everything else in
+// src/ is plain, independently testable code.
 //
 // Design constraints (odd/tasks/cascabel.md S1-S7):
 // - the child IS the user's worker: instructions are live-read per spawn,
@@ -12,8 +13,9 @@ import { resolveTier } from "./core";
 import { loadRoutings } from "./config";
 import { loadWorkerPrompt } from "./worker-prompt";
 import { runChild } from "./child";
-import { fileLogger, nullLogger } from "./log";
-import { runRoute } from "./cascade";
+import { fileLogger, nullLogger, sumUsage } from "./log";
+import { attemptLine, runRoute, totalsLine } from "./cascade";
+import { runTiersCommand, type TiersUi } from "./tiers-command";
 import type { Difficulty } from "./core";
 
 const Difficulties = Type.Union([
@@ -24,6 +26,13 @@ const Difficulties = Type.Union([
 
 export default function register(pi: {
   registerTool: (tool: unknown) => void;
+  registerCommand?: (
+    name: string,
+    options: {
+      description: string;
+      handler: (args: string, ctx: { ui?: TiersUi }) => Promise<void>;
+    },
+  ) => void;
 }): void {
   pi.registerTool({
     name: "cascabel_route_run",
@@ -109,13 +118,15 @@ export default function register(pi: {
         },
       );
 
+      const totals = totalsLine(result.attempts);
       const header = [
         `Cascabel: ${result.ok ? "PASS" : "FAIL"} after ${result.attempts.length} attempt(s).`,
-        ...result.attempts.map(
-          (a) =>
-            `- [${a.tier} #${a.attemptNo}] ${a.model}@${a.effort} → ${a.ok ? "pass" : "fail"} (${a.durationMs}ms)${a.reason ? ` — ${a.reason}` : ""}`,
-        ),
+        ...result.attempts.map(attemptLine),
+        ...(totals ? [totals] : []),
       ].join("\n");
+
+      // Cost/token totals are surfaced only when the child reported them (S8).
+      const { tokensTotal, costTotal } = sumUsage(result.attempts);
 
       const text = `${header}\n\n${result.text}`;
       // Pi's ToolDefinition requires the AgentToolResult shape — a bare
@@ -126,8 +137,35 @@ export default function register(pi: {
           ok: result.ok,
           attempts: result.attempts.length,
           tiers: result.attempts.map((a) => a.tier),
+          ...(tokensTotal !== undefined ? { tokensTotal } : {}),
+          ...(costTotal !== undefined ? { costTotal } : {}),
         },
       };
     },
   });
+
+  // `/cascabel:tiers` (S9): the built-in tier manager. Args mode is fully
+  // headless-safe; interactive mode is best-effort and degrades to help text.
+  // notify() is the documented output channel in every Pi mode; if a host
+  // lacks it, stderr keeps headless invocations observable without touching
+  // the RPC stdout stream.
+  if (typeof pi.registerCommand === "function") {
+    pi.registerCommand("cascabel:tiers", {
+      description:
+        "Show or edit Cascabel's model+effort ladder and per-tier receipt stats " +
+        "(`show`, `stats`, `set <tier> <provider/model> <effort>`; interactive when a TUI is available).",
+      handler: async (args, ctx) => {
+        const text = await runTiersCommand(args, ctx?.ui);
+        try {
+          if (ctx?.ui?.notify) {
+            ctx.ui.notify(text, "info");
+            return;
+          }
+        } catch {
+          // Fall through to stderr rather than crash the session.
+        }
+        process.stderr.write(`${text}\n`);
+      },
+    });
+  }
 }

@@ -2,7 +2,16 @@ import { mkdtempSync, existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { fileLogger, logDir, nullLogger, type AttemptReceipt } from "../src/log";
+import {
+  extractUsage,
+  fileLogger,
+  formatCost,
+  formatTokens,
+  logDir,
+  nullLogger,
+  sumUsage,
+  type AttemptReceipt,
+} from "../src/log";
 
 const base = mkdtempSync(join(tmpdir(), "cascabel-log-"));
 afterAll(() => {
@@ -85,5 +94,74 @@ describe("receipt log (S6)", () => {
 
   it("exposes a null logger for tests", () => {
     expect(() => nullLogger.record(sample())).not.toThrow();
+  });
+});
+
+describe("cost telemetry extraction (S8)", () => {
+  it("stays absent for missing or garbage stats", () => {
+    expect(extractUsage(undefined)).toEqual({});
+    expect(extractUsage(null)).toEqual({});
+    expect(extractUsage("garbage")).toEqual({});
+    expect(extractUsage({})).toEqual({});
+    expect(extractUsage({ tokens: "lots", cost: { total: "0.4" } })).toEqual({});
+    expect(
+      extractUsage({ tokens: { input: "12", output: Number.NaN, total: null } }),
+    ).toEqual({});
+  });
+
+  it("reads the documented tokens/cost shape and passes only numbers", () => {
+    expect(
+      extractUsage({
+        tokens: {
+          input: 100,
+          output: 900,
+          cacheRead: 50,
+          cacheWrite: 10,
+          total: 1060,
+        },
+        cost: { total: 0.0042, currency: "USD" },
+      }),
+    ).toEqual({
+      tokens: {
+        input: 100,
+        output: 900,
+        cacheRead: 50,
+        cacheWrite: 10,
+        total: 1060,
+      },
+      cost: { total: 0.0042, currency: "USD" },
+    });
+  });
+
+  it("accepts a plain numeric cost and nested usage objects", () => {
+    expect(
+      extractUsage({ usage: { tokens: { input: 3, output: 7 } }, cost: 0.5 }),
+    ).toEqual({ tokens: { input: 3, output: 7 }, cost: { total: 0.5 } });
+  });
+
+  it("rejects negative and non-finite numbers", () => {
+    expect(extractUsage({ tokens: { input: -1, output: Infinity } })).toEqual({});
+    expect(extractUsage({ cost: { total: -0.2 } })).toEqual({});
+  });
+
+  it("formats tokens compactly and costs with a currency", () => {
+    expect(formatTokens({ total: 12300 })).toBe("12.3k tok");
+    expect(formatTokens({ input: 100, output: 400 })).toBe("500 tok");
+    expect(formatTokens({})).toBeUndefined();
+    expect(formatCost({ total: 0.0042 })).toBe("$0.0042");
+    expect(formatCost({ total: 0.0042, currency: "USD" })).toBe("$0.0042");
+    expect(formatCost({ total: 1.5 })).toBe("$1.50");
+    expect(formatCost({ total: 0.25, currency: "EUR" })).toBe("EUR 0.25");
+    expect(formatCost(undefined)).toBeUndefined();
+  });
+
+  it("sums only known values and never invents a zero", () => {
+    expect(
+      sumUsage([
+        { tokens: { total: 100 }, cost: { total: 0.1 } },
+        { tokens: { input: 10, output: 20 } },
+      ]),
+    ).toEqual({ tokensTotal: 130, costTotal: 0.1 });
+    expect(sumUsage([{}, {}])).toEqual({});
   });
 });

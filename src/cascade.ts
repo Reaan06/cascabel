@@ -4,7 +4,14 @@
 // verdict is a fail (fail-closed). All attempts are logged before returning.
 import type { Difficulty, RoutingsFile, TierSpec } from "./core";
 import { nextTierOnFail, resolveTier } from "./core";
-import type { ReceiptLogger, AttemptReceipt } from "./log";
+import type {
+  AttemptCost,
+  AttemptReceipt,
+  AttemptTokens,
+  AttemptUsage,
+  ReceiptLogger,
+} from "./log";
+import { extractUsage, formatCost, formatTokens, formatUsageSuffix, sumUsage } from "./log";
 import type { ChildRunResult } from "./child";
 import { ChildRunError } from "./child";
 
@@ -27,6 +34,8 @@ export interface AttemptRecord {
   reason?: string;
   durationMs: number;
   sessionId?: string;
+  tokens?: AttemptTokens;
+  cost?: AttemptCost;
 }
 
 export interface RouteResult {
@@ -104,6 +113,8 @@ export async function runRoute(
 
       if (result) {
         const verification = parseVerdict(result.text);
+        // Telemetry is best-effort (S8): extract what the child reported and
+        // leave everything else absent rather than zero-filled.
         attempts.push({
           tier,
           attemptNo,
@@ -113,6 +124,7 @@ export async function runRoute(
           reason: verification.reason,
           durationMs,
           sessionId: result.sessionId,
+          ...extractUsage(result.stats),
         });
         deps.logger.record(receipt(input, attempts.at(-1)!, spec));
         if (verification.verdict === "pass") {
@@ -190,7 +202,45 @@ function receipt(
     durationMs: attempt.durationMs,
     sessionId: attempt.sessionId,
     cwd: input.cwd,
+    ...(attempt.tokens ? { tokens: attempt.tokens } : {}),
+    ...(attempt.cost ? { cost: attempt.cost } : {}),
   };
+}
+
+function withTelemetry(prefix: string, attempt: AttemptUsage): string {
+  const suffix = formatUsageSuffix(attempt);
+  return suffix ? `${prefix}, ${suffix}` : prefix;
+}
+
+/** One attempt as the parent model sees it in the result header. */
+export function attemptLine(attempt: AttemptRecord): string {
+  const timing = withTelemetry(
+    `${(attempt.durationMs / 1000).toFixed(1)}s`,
+    attempt,
+  );
+  return `- [${attempt.tier} #${attempt.attemptNo}] ${attempt.model}@${attempt.effort} → ${
+    attempt.ok ? "pass" : "fail"
+  } (${timing})${attempt.reason ? ` — ${attempt.reason}` : ""}`;
+}
+
+/**
+ * Run-level totals. Emitted only when at least one attempt reported cost
+ * (S8): token-only data does not fabricate a money figure.
+ */
+export function totalsLine(attempts: AttemptRecord[]): string | undefined {
+  const totals = sumUsage(attempts);
+  if (totals.costTotal === undefined) return undefined;
+  const parts = [`${attempts.length} attempt(s)`];
+  const tokens = formatTokens(
+    totals.tokensTotal !== undefined ? { total: totals.tokensTotal } : undefined,
+  );
+  if (tokens) parts.push(tokens);
+  const cost = formatCost({
+    total: totals.costTotal,
+    ...(totals.currency ? { currency: totals.currency } : {}),
+  });
+  if (cost) parts.push(cost);
+  return `Total: ${parts.join(", ")}`;
 }
 
 function failSummary(input: RouteInput, attempts: AttemptRecord[]): string {
@@ -199,7 +249,7 @@ function failSummary(input: RouteInput, attempts: AttemptRecord[]): string {
   ];
   for (const a of attempts) {
     lines.push(
-      `- [${a.tier} #${a.attemptNo}] ${a.model}@${a.effort}: FAIL${a.reason ? ` — ${a.reason}` : ""} (${a.durationMs}ms)`,
+      `- [${a.tier} #${a.attemptNo}] ${a.model}@${a.effort}: FAIL${a.reason ? ` — ${a.reason}` : ""} (${withTelemetry(`${a.durationMs}ms`, a)})`,
     );
   }
   lines.push(
