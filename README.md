@@ -19,9 +19,9 @@ explorer reports difficulty ──►  route_run(task, difficulty, risk?)
                                      │
             ┌────────────────────────┴───────────────┐
             ▼                                        │
-   quick  glm5.3-flash     @ medium             │ FAIL: 1 retry in tier,
-   build  glm5.3-flash     @ high                │ then one step up
-   deep   glm5.3           @ max                 │
+   quick  gemini-flash-high @ medium            │ FAIL: 1 retry in tier,
+   build  deepseek-v4-flash @ high              │ then one step up
+   deep   glm5.3           @ max                │
             └────────────────────────────────────────┘
                                      │  cap reached
                                      ▼
@@ -55,8 +55,8 @@ over defaults. To override, create the file:
 ```json
 {
   "tiers": {
-    "quick": { "model": "nan/glm5.3-flash", "effort": "medium" },
-    "build": { "model": "nan/glm5.3-flash", "effort": "high" },
+    "quick": { "model": "cli-proxy-api/gemini-3.8-flash-high", "effort": "medium" },
+    "build": { "model": "nan/deepseek-v4-flash", "effort": "high" },
     "deep":  { "model": "nan/glm5.3", "effort": "max" }
   },
   "escalation": ["quick", "build", "deep"],

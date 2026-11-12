@@ -37,15 +37,14 @@ export function defaultRoutings(): RoutingsFile {
   return {
     tiers: {
       quick: {
-        model: "nan/glm5.3-flash",
+        model: "cli-proxy-api/gemini-3.8-flash-high",
         effort: "medium",
         description: "Docs, small edits, renames, low-risk writes",
       },
       build: {
-        // Effort-first escalation (playbook rule 1): same glm flash model,
-        // higher thinking, before a model switch. GPT tiers were excluded by
-        // user decision; the smart tier is full GLM 5.3 at max effort.
-        model: "nan/glm5.3-flash",
+        // Model-first escalation per user taste (L10): easiest work -> the
+        // cheapest flash, mid work -> DeepSeek, hardest -> full GLM 5.3.
+        model: "nan/deepseek-v4-flash",
         effort: "high",
         description: "Default behavior work with tests",
       },

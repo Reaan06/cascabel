@@ -27,7 +27,7 @@ describe("childArguments", () => {
     expect(args[1]).toBe("rpc");
     expect(args).toContain("--model");
     expect(args[args.indexOf("--model") + 1]).toBe(
-      "nan/glm5.3-flash",
+      "cli-proxy-api/gemini-3.8-flash-high",
     );
     expect(args[args.indexOf("--thinking") + 1]).toBe("medium");
   });

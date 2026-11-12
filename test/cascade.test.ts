@@ -62,7 +62,8 @@ describe("runRoute — capped cascade (S4, S5, S6)", () => {
     const result = await runRoute(input, deps);
     expect(result.ok).toBe(true);
     expect(calls).toHaveLength(1);
-    expect(calls[0].model).toBe("nan/glm5.3-flash");
+    expect(calls[0].model).toBe("cli-proxy-api/gemini-3.8-flash-high");
+    expect(calls[0].effort).toBe("medium");
     expect(calls[0].task).toContain("cascabel_verdict");
     expect(result.text).toContain("work done");
   });
@@ -78,8 +79,8 @@ describe("runRoute — capped cascade (S4, S5, S6)", () => {
     const result = await runRoute(input, deps);
     expect(result.ok).toBe(true);
     expect(calls.map((c) => c.model)).toEqual([
-      "nan/glm5.3-flash",
-      "nan/glm5.3-flash",
+      "cli-proxy-api/gemini-3.8-flash-high",
+      "nan/deepseek-v4-flash",
     ]);
   });
 
@@ -109,10 +110,10 @@ describe("runRoute — capped cascade (S4, S5, S6)", () => {
     ]);
     const result = await runRoute(input, deps); // quick, quick, build
     expect(result.ok).toBe(true);
-    expect(calls.map((c) => c.model)).toEqual([
-      "nan/glm5.3-flash",
-      "nan/glm5.3-flash",
-      "nan/glm5.3-flash",
+    expect(calls.map((c) => `${c.model}@${c.effort}`)).toEqual([
+      "cli-proxy-api/gemini-3.8-flash-high@medium",
+      "cli-proxy-api/gemini-3.8-flash-high@medium",
+      "nan/deepseek-v4-flash@high",
     ]);
     const attempts = result.attempts;
     expect(attempts.map((a) => `${a.tier}#${a.attemptNo}`)).toEqual([
@@ -131,8 +132,8 @@ describe("runRoute — capped cascade (S4, S5, S6)", () => {
     const result = await runRoute(input, deps);
     expect(result.ok).toBe(true);
     expect(calls.map((c) => c.model)).toEqual([
-      "nan/glm5.3-flash",
-      "nan/glm5.3-flash",
+      "cli-proxy-api/gemini-3.8-flash-high",
+      "nan/deepseek-v4-flash",
     ]);
   });
 
@@ -150,7 +151,7 @@ describe("runRoute — capped cascade (S4, S5, S6)", () => {
     expect(calls).toHaveLength(12); // 4 quick + 4 build + 4 deep, then cap
   });
 
-  it("crashed children consume the tier retry and still escalate", async () => {
+  it("crashed children consume the tier retry instead of escalating", async () => {
     const { deps, calls } = makeDeps([
       new Error("child crashed"),
       childResult(childText("pass")),
@@ -158,8 +159,8 @@ describe("runRoute — capped cascade (S4, S5, S6)", () => {
     const result = await runRoute(input, deps);
     expect(result.ok).toBe(true);
     expect(calls.map((c) => c.model)).toEqual([
-      "nan/glm5.3-flash",
-      "nan/glm5.3-flash",
+      "cli-proxy-api/gemini-3.8-flash-high",
+      "cli-proxy-api/gemini-3.8-flash-high",
     ]);
   });
 
@@ -193,7 +194,7 @@ describe("runRoute — capped cascade (S4, S5, S6)", () => {
     expect(receipts[0]).toMatchObject({
       tier: "quick",
       ok: false,
-      model: "nan/glm5.3-flash",
+      model: "cli-proxy-api/gemini-3.8-flash-high",
       difficulty: "quick",
       label: "unit flow",
     });
@@ -214,7 +215,8 @@ describe("risk widening (S3)", () => {
     const { deps, calls } = makeDeps([childResult(childText("pass"))]);
     const result = await runRoute({ ...input, risk: "auth" }, deps);
     expect(result.ok).toBe(true);
-    expect(calls[0].model).toBe("nan/glm5.3-flash");
+    expect(calls[0].model).toBe("nan/deepseek-v4-flash");
+    expect(calls[0].effort).toBe("high");
   });
 });
 
