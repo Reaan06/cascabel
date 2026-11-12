@@ -1,8 +1,8 @@
 import { spawn } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 import {
   cascabelSessionDir,
   childArguments,
@@ -127,8 +127,31 @@ describe("runChild exit handling", () => {
   }, 30_000);
 });
 
+const tmpFiles: string[] = [];
+afterAll(() => {
+  for (const f of tmpFiles) rmSync(f, { force: true });
+});
+
 describe("nan-provider extension propagation", () => {
-  it("resolves the installed gentle-pi nan-provider entrypoint", () => {
+  it("resolves an explicit CASCABEL_NAN_PROVIDER_EXT and emits -e with it", () => {
+    const fake = join(tmpdir(), `nan-provider-${Date.now()}.ts`);
+    writeFileSync(fake, "export default () => {};\n");
+    tmpFiles.push(fake);
+    const previous = process.env.CASCABEL_NAN_PROVIDER_EXT;
+    try {
+      process.env.CASCABEL_NAN_PROVIDER_EXT = fake;
+      const resolved = resolveNanProviderExtension();
+      expect(resolved).toBe(fake);
+      expect(childArguments(base)).toEqual(expect.arrayContaining(["-e", fake]));
+    } finally {
+      if (previous === undefined) delete process.env.CASCABEL_NAN_PROVIDER_EXT;
+      else process.env.CASCABEL_NAN_PROVIDER_EXT = previous;
+    }
+  });
+
+  // Environment-specific: only meaningful where gentle-shell is installed.
+  const realInstallExists = existsSync(join(homedir(), ".gentle-shell", "versions"));
+  it.runIf(realInstallExists)("resolves the installed gentle-pi nan-provider entrypoint", () => {
     const path = resolveNanProviderExtension();
     expect(path).toBeDefined();
     expect(path).toMatch(/extensions.nan-provider\.ts$/);
