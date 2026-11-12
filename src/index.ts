@@ -82,7 +82,12 @@ export default function register(pi: {
         }),
       ),
     }),
-    async execute(_id, params) {
+    async execute(
+      _id,
+      params,
+      signal?: AbortSignal,
+      onUpdate?: (update: { content: [{ type: "text"; text: string }] }) => void,
+    ) {
       const input = params as {
         task: string;
         difficulty: Difficulty;
@@ -106,6 +111,7 @@ export default function register(pi: {
           label: input.label,
           cwd: input.workspace_root ?? process.cwd(),
           timeoutMs: input.timeout_ms,
+          signal,
         },
         {
           routings,
@@ -115,6 +121,16 @@ export default function register(pi: {
               ? nullLogger
               : fileLogger(),
           runChild,
+          onAttempt: (info) => {
+            onUpdate?.({
+              content: [
+                {
+                  type: "text",
+                  text: `Cascabel: attempt ${info.attempt} on tier ${info.tier} (${info.model}@${info.effort}), running…`,
+                },
+              ],
+            });
+          },
         },
       );
 
