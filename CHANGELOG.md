@@ -6,6 +6,9 @@ SemVer 2.0.0).
 ## [0.3.0] - 2026-11-12
 
 ### Added
+- Listed on Gentle Hub (community edition) via `gentle-shell-package` + `gentle-shell-extension` topics.
+
+### Added
 - **Cost telemetry (S8).** Every attempt receipt carries optional
   `tokens` (`input`, `output`, `cacheRead`, `cacheWrite`, `total`) and `cost`
   (`total`, `currency`) extracted defensively from the child session's

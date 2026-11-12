@@ -177,6 +177,10 @@ TUI the command falls back to the args-mode help instead of throwing.
 Both modes print the three routing rules inline: difficulty comes from exploration, a
 named risk never routes below build, and the cap is the feature.
 
+## Gentle Hub
+
+Listed in the community catalog: [gentle-hub — extensions](https://gentlemanprogramming.com/gentle-hub/?type=extension) via the `gentle-shell-package` / `gentle-shell-extension` topics.
+
 ## Compatibility
 
 Cascabel is a standard `pi-package`. It imports only Pi's documented CLI/RPC surface and
