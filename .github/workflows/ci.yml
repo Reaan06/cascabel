@@ -1,0 +1,54 @@
+# Cascabel CI: unit suite + secret scan. The real-model smoke stays manual
+# (`npm run smoke`) — CI never talks to model providers.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege: read-only on repository contents (devops-skill mandate).
+permissions:
+  contents: read
+  packages: none
+  issues: none
+  pull-requests: none
+
+jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, immutable
+        with:
+          fetch-depth: 0
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2, immutable
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, immutable
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4, immutable
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install (lockfile-pinned)
+        run: npm ci
+      - name: Unit suite
+        run: npm test
+      - name: Tool surface sanity (no model calls)
+        run: |
+          node --input-type=module -e '
+          import { readFileSync } from "node:fs";
+          const src = readFileSync("src/index.ts", "utf8");
+          const ok = src.includes("cascabel_route_run")
+            && src.includes("content: [{ type: \"text\", text }]");
+          if (!ok) { console.error("tool surface broken"); process.exit(1); }
+          console.log("tool surface: ok");'
