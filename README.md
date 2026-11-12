@@ -1,5 +1,7 @@
 # Cascabel
 
+[![ci](https://github.com/Reaan06/cascabel/actions/workflows/ci.yml/badge.svg)](https://github.com/Reaan06/cascabel/actions/workflows/ci.yml)
+
 Task-difficulty model routing for Pi coding agents. **One worker, dynamically routed
 model + thinking effort per task, with a capped escalation cascade and full receipts.**
 
