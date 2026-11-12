@@ -4,7 +4,7 @@ name: ci
 
 on:
   push:
-    branches: [main]
+    branches: [master, main]
   pull_request:
 
 # Least privilege: read-only on repository contents (devops-skill mandate).
