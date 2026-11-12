@@ -29,7 +29,7 @@ describe("loadRoutings — fail-closed config (S6)", () => {
   it("falls back to defaults when the file is absent", () => {
     const loaded = loadRoutings(join(sandbox, "missing.json"));
     expect(loaded.tiers.quick.model).toBe(
-      "cli-proxy-api/gemini-3.8-flash-high",
+      "nan/glm5.3-flash",
     );
   });
 
@@ -43,8 +43,8 @@ describe("loadRoutings — fail-closed config (S6)", () => {
     );
     expect(loaded.tiers.quick.model).toBe("custom/cheap");
     // untouched tiers keep defaults
-    expect(loaded.tiers.build.model).toBe("cli-proxy-api/gemini-3.8-flash-high");
-    expect(loaded.tiers.deep.effort).toBe("high");
+    expect(loaded.tiers.build.model).toBe("nan/glm5.3-flash");
+    expect(loaded.tiers.deep.effort).toBe("max");
   });
 
   it("rejects a tier with a bad effort", () => {
@@ -122,16 +122,16 @@ describe("shipped defaults (S5)", () => {
   it("matches the agreed tier alignment", () => {
     const d = defaultRoutings();
     expect(d.tiers.quick).toMatchObject({
-      model: "cli-proxy-api/gemini-3.8-flash-high",
+      model: "nan/glm5.3-flash",
       effort: "medium",
     });
     expect(d.tiers.build).toMatchObject({
-      model: "cli-proxy-api/gemini-3.8-flash-high",
+      model: "nan/glm5.3-flash",
       effort: "high",
     });
     expect(d.tiers.deep).toMatchObject({
-      model: "cli-proxy-api/gpt-5.6-sol",
-      effort: "high",
+      model: "nan/glm5.3",
+      effort: "max",
     });
     expect(d.escalation).toEqual(["quick", "build", "deep"]);
   });

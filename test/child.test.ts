@@ -8,6 +8,7 @@ import {
   childArguments,
   type ChildRunOptions,
   ChildRunError,
+  resolveNanProviderExtension,
   runChild,
   type SpawnLike,
 } from "../src/child";
@@ -26,7 +27,7 @@ describe("childArguments", () => {
     expect(args[1]).toBe("rpc");
     expect(args).toContain("--model");
     expect(args[args.indexOf("--model") + 1]).toBe(
-      "cli-proxy-api/gemini-3.8-flash-high",
+      "nan/glm5.3-flash",
     );
     expect(args[args.indexOf("--thinking") + 1]).toBe("medium");
   });
@@ -124,4 +125,35 @@ describe("runChild exit handling", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   }, 30_000);
+});
+
+describe("nan-provider extension propagation", () => {
+  it("resolves the installed gentle-pi nan-provider entrypoint", () => {
+    const path = resolveNanProviderExtension();
+    expect(path).toBeDefined();
+    expect(path).toMatch(/extensions.nan-provider\.ts$/);
+  });
+
+  it("omits -e when the extension cannot be resolved", () => {
+    const previous = process.env.CASCABEL_NAN_PROVIDER_EXT;
+    try {
+      process.env.CASCABEL_NAN_PROVIDER_EXT = "/nonexistent/nan-provider.ts";
+      expect(resolveNanProviderExtension()).toBeUndefined();
+      expect(childArguments(base)).not.toContain("-e");
+    } finally {
+      if (previous === undefined) delete process.env.CASCABEL_NAN_PROVIDER_EXT;
+      else process.env.CASCABEL_NAN_PROVIDER_EXT = previous;
+    }
+  });
+
+  it("honours CASCABEL_NO_NAN_PROVIDER=1", () => {
+    const previous = process.env.CASCABEL_NO_NAN_PROVIDER;
+    try {
+      process.env.CASCABEL_NO_NAN_PROVIDER = "1";
+      expect(resolveNanProviderExtension()).toBeUndefined();
+    } finally {
+      if (previous === undefined) delete process.env.CASCABEL_NO_NAN_PROVIDER;
+      else process.env.CASCABEL_NO_NAN_PROVIDER = previous;
+    }
+  });
 });

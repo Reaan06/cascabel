@@ -37,23 +37,21 @@ export function defaultRoutings(): RoutingsFile {
   return {
     tiers: {
       quick: {
-        model: "cli-proxy-api/gemini-3.8-flash-high",
+        model: "nan/glm5.3-flash",
         effort: "medium",
         description: "Docs, small edits, renames, low-risk writes",
       },
       build: {
-        // Effort-first escalation (playbook rule 1): same proven model, higher
-        // thinking, before a model switch. The previous nan/deepseek-v4-flash
-        // tier does not resolve in headless children (nan provider comes from
-        // a TUI-side bridge extension); restore it only when its catalog
-        // resolves via get_available_models in `pi --mode rpc`.
-        model: "cli-proxy-api/gemini-3.8-flash-high",
+        // Effort-first escalation (playbook rule 1): same glm flash model,
+        // higher thinking, before a model switch. GPT tiers were excluded by
+        // user decision; the smart tier is full GLM 5.3 at max effort.
+        model: "nan/glm5.3-flash",
         effort: "high",
         description: "Default behavior work with tests",
       },
       deep: {
-        model: "cli-proxy-api/gpt-5.6-sol",
-        effort: "high",
+        model: "nan/glm5.3",
+        effort: "max",
         description: "High-risk items and post-failure escalation only",
       },
     },

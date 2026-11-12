@@ -4,7 +4,7 @@
 // No agent flags exist, so worker identity arrives as --append-system-prompt.
 import { spawn, type ChildProcess } from "node:child_process";
 import { once } from "node:events";
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { TierSpec } from "./core";
@@ -56,10 +56,49 @@ export function childArguments(opts: ChildRunOptions): string[] {
   args.push("--model", opts.tierSpec.model);
   args.push("--thinking", opts.tierSpec.effort);
   args.push(approvalFlag(opts.tierSpec.approval));
+  const nanExt = resolveNanProviderExtension();
+  if (nanExt) args.push("-e", nanExt);
   if (opts.systemPrompt) {
     args.push("--append-system-prompt", opts.systemPrompt);
   }
   return args;
+}
+
+/**
+ * Resolve the installed gentle-pi nan-provider extension so routed children
+ * can reach provider `nan` (GLM / DeepSeek). Plain `pi --mode rpc` children
+ * only load global packages; gentle-pi injects this extension only into its
+ * own runner's children. Loading the published extension ENTRYPOINT file via
+ * the documented `-e` flag keeps us off gentle-pi internals. A missing file
+ * degrades gracefully: nan-tier models then fail closed at spawn with a
+ * clear "model not found" receipt instead of a silent guess.
+ * Env: CASCABEL_NAN_PROVIDER_EXT (explicit path) or CASCABEL_NO_NAN_PROVIDER=1 (skip).
+ */
+export function resolveNanProviderExtension(): string | undefined {
+  const override = process.env.CASCABEL_NAN_PROVIDER_EXT;
+  if (override !== undefined) return existsSync(override) ? override : undefined;
+  if (process.env.CASCABEL_NO_NAN_PROVIDER === "1") return undefined;
+  const base = join(homedir(), ".gentle-shell", "versions");
+  let best: string | undefined;
+  let bestTime = 0;
+  try {
+    for (const version of readdirSync(base)) {
+      for (const candidate of [
+        join(base, version, "node_modules", ".pnpm", `gentle-pi@${version}`, "node_modules", "gentle-pi", "extensions", "nan-provider.ts"),
+        join(base, version, "node_modules", "gentle-pi", "extensions", "nan-provider.ts"),
+      ]) {
+        if (!existsSync(candidate)) continue;
+        const mtime = statSync(candidate).mtimeMs;
+        if (mtime >= bestTime) {
+          bestTime = mtime;
+          best = candidate;
+        }
+      }
+    }
+  } catch {
+    return undefined;
+  }
+  return best;
 }
 
 /**

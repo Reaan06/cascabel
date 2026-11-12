@@ -62,7 +62,7 @@ describe("runRoute — capped cascade (S4, S5, S6)", () => {
     const result = await runRoute(input, deps);
     expect(result.ok).toBe(true);
     expect(calls).toHaveLength(1);
-    expect(calls[0].model).toBe("cli-proxy-api/gemini-3.8-flash-high");
+    expect(calls[0].model).toBe("nan/glm5.3-flash");
     expect(calls[0].task).toContain("cascabel_verdict");
     expect(result.text).toContain("work done");
   });
@@ -78,8 +78,8 @@ describe("runRoute — capped cascade (S4, S5, S6)", () => {
     const result = await runRoute(input, deps);
     expect(result.ok).toBe(true);
     expect(calls.map((c) => c.model)).toEqual([
-      "cli-proxy-api/gemini-3.8-flash-high",
-      "cli-proxy-api/gemini-3.8-flash-high",
+      "nan/glm5.3-flash",
+      "nan/glm5.3-flash",
     ]);
   });
 
@@ -110,9 +110,9 @@ describe("runRoute — capped cascade (S4, S5, S6)", () => {
     const result = await runRoute(input, deps); // quick, quick, build
     expect(result.ok).toBe(true);
     expect(calls.map((c) => c.model)).toEqual([
-      "cli-proxy-api/gemini-3.8-flash-high",
-      "cli-proxy-api/gemini-3.8-flash-high",
-      "cli-proxy-api/gemini-3.8-flash-high",
+      "nan/glm5.3-flash",
+      "nan/glm5.3-flash",
+      "nan/glm5.3-flash",
     ]);
     const attempts = result.attempts;
     expect(attempts.map((a) => `${a.tier}#${a.attemptNo}`)).toEqual([
@@ -131,8 +131,8 @@ describe("runRoute — capped cascade (S4, S5, S6)", () => {
     const result = await runRoute(input, deps);
     expect(result.ok).toBe(true);
     expect(calls.map((c) => c.model)).toEqual([
-      "cli-proxy-api/gemini-3.8-flash-high",
-      "cli-proxy-api/gemini-3.8-flash-high",
+      "nan/glm5.3-flash",
+      "nan/glm5.3-flash",
     ]);
   });
 
@@ -158,8 +158,8 @@ describe("runRoute — capped cascade (S4, S5, S6)", () => {
     const result = await runRoute(input, deps);
     expect(result.ok).toBe(true);
     expect(calls.map((c) => c.model)).toEqual([
-      "cli-proxy-api/gemini-3.8-flash-high",
-      "cli-proxy-api/gemini-3.8-flash-high",
+      "nan/glm5.3-flash",
+      "nan/glm5.3-flash",
     ]);
   });
 
@@ -193,7 +193,7 @@ describe("runRoute — capped cascade (S4, S5, S6)", () => {
     expect(receipts[0]).toMatchObject({
       tier: "quick",
       ok: false,
-      model: "cli-proxy-api/gemini-3.8-flash-high",
+      model: "nan/glm5.3-flash",
       difficulty: "quick",
       label: "unit flow",
     });
@@ -214,7 +214,7 @@ describe("risk widening (S3)", () => {
     const { deps, calls } = makeDeps([childResult(childText("pass"))]);
     const result = await runRoute({ ...input, risk: "auth" }, deps);
     expect(result.ok).toBe(true);
-    expect(calls[0].model).toBe("cli-proxy-api/gemini-3.8-flash-high");
+    expect(calls[0].model).toBe("nan/glm5.3-flash");
   });
 });
 

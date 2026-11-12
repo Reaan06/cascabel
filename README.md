@@ -19,9 +19,9 @@ explorer reports difficulty ──►  route_run(task, difficulty, risk?)
                                      │
             ┌────────────────────────┴───────────────┐
             ▼                                        │
-   quick  gemini-3.8-flash-high @ medium             │ FAIL: 1 retry in tier,
-   build  gemini-3.8-flash-high @ high                │ then one step up
-   deep   gpt-5.6-sol           @ high               │
+   quick  glm5.3-flash     @ medium             │ FAIL: 1 retry in tier,
+   build  glm5.3-flash     @ high                │ then one step up
+   deep   glm5.3           @ max                 │
             └────────────────────────────────────────┘
                                      │  cap reached
                                      ▼
@@ -55,9 +55,9 @@ over defaults. To override, create the file:
 ```json
 {
   "tiers": {
-    "quick": { "model": "cli-proxy-api/gemini-3.8-flash-high", "effort": "medium" },
-    "build": { "model": "cli-proxy-api/gemini-3.8-flash-high", "effort": "high" },
-    "deep":  { "model": "cli-proxy-api/gpt-5.6-sol", "effort": "high" }
+    "quick": { "model": "nan/glm5.3-flash", "effort": "medium" },
+    "build": { "model": "nan/glm5.3-flash", "effort": "high" },
+    "deep":  { "model": "nan/glm5.3", "effort": "max" }
   },
   "escalation": ["quick", "build", "deep"],
   "retriesPerTier": 1,
@@ -91,7 +91,7 @@ Per attempt, one JSON line is appended to `~/.pi/cascabel/logs/attempts.jsonl`:
 
 ```json
 {"timestamp":"...","label":"map footer","difficulty":"quick","risk":null,"tier":"quick",
- "attempt":1,"model":"cli-proxy-api/gemini-3.8-flash-high","effort":"medium","ok":false,
+ "attempt":1,"model":"nan/glm5.3-flash","effort":"medium","ok":false,
  "reason":"tests red: expect(foo).toBe(bar)","durationMs":51234,"sessionId":"...","cwd":"..."}
 ```
 

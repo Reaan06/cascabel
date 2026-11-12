@@ -16,7 +16,7 @@ function sample(): AttemptReceipt {
     difficulty: "quick",
     tier: "quick",
     attempt: 1,
-    model: "cli-proxy-api/gemini-3.8-flash-high",
+    model: "nan/glm5.3-flash",
     effort: "medium",
     ok: true,
     durationMs: 1234,
